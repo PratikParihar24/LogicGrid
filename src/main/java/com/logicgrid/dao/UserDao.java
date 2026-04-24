@@ -1,6 +1,5 @@
 package com.logicgrid.dao;
 
-// EXACT IMPORTS REQUIRED
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import com.logicgrid.models.User;
@@ -8,26 +7,19 @@ import com.logicgrid.config.HibernateUtil;
 
 public class UserDao {
 
+    // --- 1. SAVE USER METHOD ---
     public void saveUser(User user) {
         Transaction transaction = null;
-        Session session = null; // Declare it up here now
+        Session session = null; 
         
         try {
-            // Open the session manually
             session = HibernateUtil.getSessionFactory().openSession();
-            
-            // Start the transaction
             transaction = session.beginTransaction();
-            
-            // Save the object
             session.save(user);
-            
-            // Lock it in
             transaction.commit();
             System.out.println("DAO SUCCESS: User '" + user.getUsername() + "' saved to database!");
             
         } catch (Exception e) {
-            // Roll back if it fails
             if (transaction != null) {
                 transaction.rollback();
             }
@@ -35,10 +27,41 @@ public class UserDao {
             e.printStackTrace();
             
         } finally {
-            // BULLETPROOF CLOSING: Guarantee the session closes, avoiding the AutoCloseable error
             if (session != null) {
                 session.close();
             }
         }
+    }
+
+    // --- 2. AUTHENTICATE USER METHOD ---
+    public User authenticateUser(String username, String password) {
+        Session session = null;
+        User user = null;
+        
+        try {
+            session = HibernateUtil.getSessionFactory().openSession();
+            
+            String hql = "FROM User WHERE username = :username";
+            user = (User) session.createQuery(hql)
+                                 .setParameter("username", username)
+                                 .uniqueResult();
+            
+            if (user != null && user.getPassword().equals(password)) {
+                System.out.println("DAO SUCCESS: User '" + username + "' authenticated!");
+                return user; 
+            }
+            
+        } catch (Exception e) {
+            System.err.println("DAO ERROR: Failed to authenticate user.");
+            e.printStackTrace();
+            
+        } finally {
+            if (session != null) {
+                session.close();
+            }
+        }
+        
+        System.out.println("DAO ALERT: Invalid login attempt for '" + username + "'.");
+        return null; 
     }
 }
