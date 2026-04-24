@@ -23,8 +23,13 @@
     <div class="arena-box">
         <div class="status" id="gameStatus">Searching for Opponent...</div>
         
-        <div class="code-display" id="questionBox">
+        <div class="code-display" id="questionBox" style="display:none;">
             // The Question will appear here
+        </div>
+        
+        <div id="answerArea" style="display:none; margin-top: 20px;">
+            <input type="text" id="playerAnswer" placeholder="Type the exact output here..." style="padding: 10px; font-size: 1.2em; width: 60%; border-radius: 5px; border: 1px solid #ccc; color: #000;">
+            <button onclick="submitAnswer()" style="padding: 10px 20px; font-size: 1.2em; background-color: #00ff00; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">SUBMIT</button>
         </div>
         
         <a href="lobby" class="btn-cancel">Cancel Search</a>
@@ -45,33 +50,53 @@
         socket.onopen = function(event) {
             console.log("Browser: Successfully connected to the Arena WebSocket!");
             
-            // Send a test message to the Java server
-            socket.send("Hello from the browser! I am ready to fight.");
         };
 
-        // 4. What to do when the Java server sends a message to the browser
-        // 4. What to do when the Java server sends a message
+     // 4. What to do when the Java server sends a message
         socket.onmessage = function(event) {
-            // Translate the JSON string back into a JavaScript Object
             const data = JSON.parse(event.data);
             
-            // Did the server just find us a match?
+            // --- SCENARIO A: A New Question is loaded ---
             if (data.type === "MATCH_FOUND") {
-                console.log("Match Found! Questions loaded.", data.questions);
+                console.log("Match Found/Advanced! Questions loaded.", data.questions);
                 
-                // 1. Change the Status Text
                 statusText.innerHTML = "MATCH FOUND! Prepare for Battle.";
                 statusText.style.animation = "none";
-                statusText.style.color = "#00ff00"; // Turn it green
+                statusText.style.color = "#00ff00"; 
                 
-                // 2. Reveal the Game Board
                 const qBox = document.getElementById("questionBox");
+                const aArea = document.getElementById("answerArea"); 
                 qBox.style.display = "block";
+                aArea.style.display = "block"; 
                 
-                // 3. Inject the very first question into the HTML
                 const currentQuestion = data.questions[0];
                 qBox.innerHTML = "<h3>" + currentQuestion.title + " (" + currentQuestion.difficulty + ")</h3>" +
                                  "<pre>" + currentQuestion.codeSnippet + "</pre>";
+            } 
+            
+            // --- SCENARIO B: The Game is Over ---
+            else if (data.type === "GAME_OVER") {
+                console.log("Match Complete: ", data.message);
+                
+                // Hide the arena board
+                document.getElementById("questionBox").style.display = "none";
+                document.getElementById("answerArea").style.display = "none";
+                
+                // Announce the end of the match
+                statusText.innerHTML = "⚔️ " + data.message + " ⚔️";
+                statusText.style.color = "#f1c40f"; // Turn it Gold
+                
+                // Change the cancel button to "Return to Lobby"
+                const returnBtn = document.querySelector(".btn-cancel");
+                returnBtn.innerHTML = "Return to Lobby";
+                returnBtn.style.backgroundColor = "#3498db"; // Turn it blue
+            }
+
+            // --- SCENARIO C: The Player guessed wrong ---
+            else if (data.type === "WRONG_ANSWER") {
+                // Shake the input box or alert the user
+                alert("❌ " + data.message);
+                document.getElementById("playerAnswer").value = ""; // clear their wrong answer
             }
         };
 
@@ -82,6 +107,30 @@
             statusText.style.color = "#e74c3c"; // Turn text red
             statusText.style.animation = "none"; // Stop pulsing
         };
+        
+     // 6. Function to submit the answer back to Java
+        function submitAnswer() {
+            const inputField = document.getElementById("playerAnswer");
+            const answerText = inputField.value.trim();
+            
+            if (answerText === "") {
+                alert("You must type an answer first!");
+                return;
+            }
+            
+            // Package the answer into a JSON object
+            const payload = {
+                type: "SUBMIT_ANSWER",
+                answer: answerText
+            };
+            
+            // Send it over the WebSocket!
+            socket.send(JSON.stringify(payload));
+            
+            // Clear the box for the next question
+            inputField.value = "";
+            console.log("Sent answer to server: " + answerText);
+        }
     </script>
     
 </body>

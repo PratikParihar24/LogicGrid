@@ -64,4 +64,33 @@ public class UserDao {
         System.out.println("DAO ALERT: Invalid login attempt for '" + username + "'.");
         return null; 
     }
+ // --- 3. UPDATE USER METHOD ---
+    public void updateUser(User user) {
+        Transaction transaction = null;
+        Session session = null;
+        
+        try {
+            session = HibernateUtil.getSessionFactory().openSession();
+            transaction = session.beginTransaction();
+            
+            // Hibernate's update method overwrites the DB row with this object's new data
+            session.update(user); 
+            
+            transaction.commit();
+            System.out.println("DAO SUCCESS: User '" + user.getUsername() + "' updated in DB!");
+            
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            System.err.println("DAO ERROR: Failed to update user.");
+            e.printStackTrace();
+            
+        } finally {
+            if (session != null) {
+                session.close();
+            }
+        }
+    }
+    
 }

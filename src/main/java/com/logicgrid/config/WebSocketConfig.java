@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 import com.logicgrid.websocket.GameSocketHandler;
 
@@ -14,9 +15,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // This opens the ws://localhost:8080/LogicGrid/game endpoint
         registry.addHandler(gameSocketHandler(), "/game")
-                .setAllowedOrigins("*"); // Allow connections from anywhere during testing
+                .addInterceptors(new HttpSessionHandshakeInterceptor()) // <-- THE IDENTITY BRIDGE
+                .setAllowedOrigins("*"); 
     }
 
     @Bean
