@@ -29,7 +29,7 @@
         <div class="stats-box">
             Elo Rating: <span class="highlight">${sessionScope.loggedInUser.eloRating}</span>
         </div>
-        </div>
+    </div>
 
     <div class="main-action">
         <a href="matchmake" class="btn-play">FIND MATCH (1v1)</a>
@@ -50,7 +50,7 @@
         </tr>
     </table>
 
-    <a href="${pageContext.request.contextPath}/" class="btn-home">Return to Home</a>
+    <a href="logout" class="btn-home" style="background-color: #e74c3c;">Logout</a>
 
 </body>
 </html>

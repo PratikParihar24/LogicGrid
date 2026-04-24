@@ -25,17 +25,22 @@ public class UserController {
     public String processRegistration(
             @RequestParam("username") String username,
             @RequestParam("password") String password,
+            HttpSession session, // Added Session for Auto-Login
             Model model) {
         
         User newUser = new User();
         newUser.setUsername(username);
         newUser.setPassword(password);
+        newUser.setEloRating(1000); // CRITICAL FIX: Give them a starting rating so DB saves them!
         
         UserDao dao = new UserDao();
         dao.saveUser(newUser);
         
-        model.addAttribute("successMessage", "Welcome to LogicGrid, " + username + "! Your account is active.");
-        return "index"; 
+        // Auto-Login and send directly to Lobby
+        session.setAttribute("loggedInUser", newUser);
+        System.out.println("LOG: Auto-login session created for new user " + username);
+        
+        return "redirect:/lobby"; 
     }
 
     // --- LOGIN ROUTES ---
@@ -58,7 +63,8 @@ public class UserController {
         if (authenticatedUser != null) {
             session.setAttribute("loggedInUser", authenticatedUser);
             System.out.println("LOG: Session created for " + username);
-            return "redirect:/"; 
+            
+            return "redirect:/lobby"; // FIX: Point to lobby, not "/"
         } else {
             model.addAttribute("errorMessage", "Invalid username or password!");
             return "login";
@@ -70,6 +76,6 @@ public class UserController {
     @RequestMapping(value = "/logout", method = RequestMethod.GET)
     public String logout(HttpSession session) {
         session.invalidate(); 
-        return "redirect:/";
+        return "redirect:/"; // Safely kick them back to the landing page
     }
 }
