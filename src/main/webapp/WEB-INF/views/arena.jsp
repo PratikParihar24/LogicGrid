@@ -50,8 +50,29 @@
         };
 
         // 4. What to do when the Java server sends a message to the browser
+        // 4. What to do when the Java server sends a message
         socket.onmessage = function(event) {
-            console.log("Browser received: " + event.data);
+            // Translate the JSON string back into a JavaScript Object
+            const data = JSON.parse(event.data);
+            
+            // Did the server just find us a match?
+            if (data.type === "MATCH_FOUND") {
+                console.log("Match Found! Questions loaded.", data.questions);
+                
+                // 1. Change the Status Text
+                statusText.innerHTML = "MATCH FOUND! Prepare for Battle.";
+                statusText.style.animation = "none";
+                statusText.style.color = "#00ff00"; // Turn it green
+                
+                // 2. Reveal the Game Board
+                const qBox = document.getElementById("questionBox");
+                qBox.style.display = "block";
+                
+                // 3. Inject the very first question into the HTML
+                const currentQuestion = data.questions[0];
+                qBox.innerHTML = "<h3>" + currentQuestion.title + " (" + currentQuestion.difficulty + ")</h3>" +
+                                 "<pre>" + currentQuestion.codeSnippet + "</pre>";
+            }
         };
 
         // 5. What to do if the server crashes or the connection dies
