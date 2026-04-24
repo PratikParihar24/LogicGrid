@@ -32,4 +32,22 @@ public class ArenaController {
         
         return "lobby"; // Directs them to lobby.jsp (which we will build next)
     }
+    
+ // The Gateway to the Matchmaking Queue
+    @RequestMapping(value = "/matchmake", method = RequestMethod.GET)
+    public String enterMatchmaking(HttpSession session, Model model) {
+        
+        // 1. Check the Wristband
+        User currentPlayer = (User) session.getAttribute("loggedInUser");
+        if (currentPlayer == null) {
+            return "redirect:/login"; 
+        }
+        
+        // 2. Log that they clicked the button
+        System.out.println("MATCHMAKER: " + currentPlayer.getUsername() + " has entered the queue!");
+        
+        // 3. Send them to the Arena page
+        return "arena"; 
+    }
+    
 }

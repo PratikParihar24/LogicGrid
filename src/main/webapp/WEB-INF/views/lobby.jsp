@@ -32,7 +32,7 @@
         </div>
 
     <div class="main-action">
-        <a href="#" class="btn-play">FIND MATCH (1v1)</a>
+        <a href="matchmake" class="btn-play">FIND MATCH (1v1)</a>
     </div>
 
     <h2>Recent Battles</h2>

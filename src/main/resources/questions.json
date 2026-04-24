@@ -1,0 +1,32 @@
+[
+  {
+    "id": 101,
+    "difficulty": "easy",
+    "type": "output_duel",
+    "title": "The Loop Trap",
+    "codeSnippet": "int x = 0;\nfor(int i = 0; i < 3; i++) {\n    x += i;\n}\nSystem.out.print(x);",
+    "options": [],
+    "correctAnswer": "3",
+    "explanation": "The loop runs for i=0, 1, 2. x becomes 0+0+1+2 = 3."
+  },
+  {
+    "id": 102,
+    "difficulty": "easy",
+    "type": "missing_link",
+    "title": "Boolean Logic",
+    "codeSnippet": "public boolean isEven(int num) {\n    return num % 2 == ________;\n}",
+    "options": ["1", "0", "num", "2"],
+    "correctAnswer": "0",
+    "explanation": "An even number divided by 2 always has a remainder of 0."
+  },
+  {
+    "id": 103,
+    "difficulty": "medium",
+    "type": "output_duel",
+    "title": "Array Sneak",
+    "codeSnippet": "int[] nums = {10, 20, 30};\nnums[1] = nums[0] + nums[2];\nSystem.out.print(nums[1]);",
+    "options": [],
+    "correctAnswer": "40",
+    "explanation": "Arrays are 0-indexed. nums[0] is 10, nums[2] is 30. 10 + 30 = 40."
+  }
+]
