@@ -22,6 +22,12 @@
 
     <div class="arena-box">
         <div class="status" id="gameStatus">Searching for Opponent...</div>
+        <div id="toastNotification" style="display:none; padding: 15px; margin: 15px auto; width: 60%; border-radius: 5px; font-weight: bold; text-align: center; font-size: 1.2em; transition: opacity 0.5s;">
+    	</div>
+
+    	<div id="countdownBox" style="display:none; font-size: 4em; color: #f1c40f; text-align: center; margin: 40px 0; animation: pulse 1s infinite;">
+        3
+    	</div>
         
         <div class="code-display" id="questionBox" style="display:none;">
             // The Question will appear here
@@ -57,50 +63,72 @@
         socket.onmessage = function(event) {
             const data = JSON.parse(event.data);
             
-            // --- SCENARIO A: A New Question is loaded ---
             if (data.type === "MATCH_FOUND") {
-                console.log("Match Found/Advanced! Questions loaded.", data.questions);
+                // 1. Lock the Queue: Hide the Cancel Search button immediately
+                const cancelBtn = document.querySelector(".btn-cancel");
+                if(cancelBtn) cancelBtn.style.display = "none";
                 
                 statusText.innerHTML = "MATCH FOUND! Prepare for Battle.";
-                statusText.style.animation = "none";
                 statusText.style.color = "#00ff00"; 
                 
+                // 2. The Buffer: Start a 3-second countdown
+                const cBox = document.getElementById("countdownBox");
                 const qBox = document.getElementById("questionBox");
-                const aArea = document.getElementById("answerArea"); 
-                qBox.style.display = "block";
-                aArea.style.display = "block"; 
+                const aArea = document.getElementById("answerArea");
                 
-                const currentQuestion = data.questions[0];
-                qBox.innerHTML = "<h3>" + currentQuestion.title + " (" + currentQuestion.difficulty + ")</h3>" +
-                                 "<pre>" + currentQuestion.codeSnippet + "</pre>";
+                qBox.style.display = "none"; // Ensure board is hidden during countdown
+                aArea.style.display = "none";
+                cBox.style.display = "block";
+                
+                let count = 3;
+                cBox.innerHTML = count;
+                
+                let timer = setInterval(() => {
+                    count--;
+                    if(count > 0) {
+                        cBox.innerHTML = count;
+                    } else {
+                        clearInterval(timer);
+                        cBox.style.display = "none";
+                        
+                        // 3. Reveal the Board!
+                        qBox.style.display = "block";
+                        aArea.style.display = "block"; 
+                        
+                        const currentQuestion = data.questions[0];
+                        qBox.innerHTML = "<h3>" + currentQuestion.title + " (" + currentQuestion.difficulty + ")</h3>" +
+                                         "<pre>" + currentQuestion.codeSnippet + "</pre>";
+                    }
+                }, 1000);
             } 
             
-            // --- SCENARIO B: The Game is Over ---
+            else if (data.type === "OPPONENT_SCORED") {
+                // Show a yellow warning that the opponent got it right!
+                showToast("⚠️ " + data.message, "#f1c40f");
+            }
+            
             else if (data.type === "GAME_OVER") {
-                console.log("Match Complete: ", data.message);
-                
-                // Hide the arena board
                 document.getElementById("questionBox").style.display = "none";
                 document.getElementById("answerArea").style.display = "none";
+                document.getElementById("countdownBox").style.display = "none";
                 
-                // Announce the end of the match
                 statusText.innerHTML = "⚔️ " + data.message + " ⚔️";
-                statusText.style.color = "#f1c40f"; // Turn it Gold
+                statusText.style.color = "#f1c40f"; 
                 
-                // Change the cancel button to "Return to Lobby"
                 const returnBtn = document.querySelector(".btn-cancel");
-                returnBtn.innerHTML = "Return to Lobby";
-                returnBtn.style.backgroundColor = "#3498db"; // Turn it blue
+                if(returnBtn) {
+                    returnBtn.innerHTML = "Return to Lobby";
+                    returnBtn.style.backgroundColor = "#3498db"; 
+                    returnBtn.style.display = "inline-block"; // Bring it back so they can leave
+                }
             }
 
-            // --- SCENARIO C: The Player guessed wrong ---
             else if (data.type === "WRONG_ANSWER") {
-                // Shake the input box or alert the user
-                alert("❌ " + data.message);
-                document.getElementById("playerAnswer").value = ""; // clear their wrong answer
+                // Use our new smooth toast instead of an alert()
+                showToast("❌ " + data.message, "#e74c3c");
+                document.getElementById("playerAnswer").value = ""; 
             }
         };
-
         // 5. What to do if the server crashes or the connection dies
         socket.onclose = function(event) {
             console.log("Browser: Connection to server lost.");
@@ -138,6 +166,20 @@
                 const payload = { type: "SURRENDER" };
                 socket.send(JSON.stringify(payload));
             }
+        }
+     
+     // HELPER: Show a custom HTML notification instead of an alert()
+        function showToast(message, color) {
+            const toast = document.getElementById("toastNotification");
+            toast.innerHTML = message;
+            toast.style.backgroundColor = color;
+            toast.style.color = (color === "#f1c40f" || color === "#ffffff") ? "#000" : "#fff"; // Dark text for light backgrounds
+            toast.style.display = "block";
+            toast.style.opacity = "1";
+            
+            // Fade it out after 3 seconds
+            setTimeout(() => { toast.style.opacity = "0"; }, 3000);
+            setTimeout(() => { toast.style.display = "none"; }, 3500);
         }
     </script>
     

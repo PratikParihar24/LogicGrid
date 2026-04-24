@@ -85,7 +85,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
             // Attempt to parse the incoming message as JSON
             Map<String, String> payload = gson.fromJson(message.getPayload(), Map.class);
             
-         // NEW: Check if they clicked Surrender
+            // Check if they clicked Surrender
             if ("SURRENDER".equals(payload.get("type"))) {
                 handleForfeit(session);
                 return; // Stop processing, the game is over
@@ -98,6 +98,23 @@ public class GameSocketHandler extends TextWebSocketHandler {
                 if (userAnswer.equalsIgnoreCase(currentQuestion.getCorrectAnswer().trim())) {
                     System.out.println("REFEREE: " + session.getId() + " got it RIGHT!");
                     currentMatch.addPoint(session);
+                    
+                    // --- NEW: SPRINT 3 STEP 3 (OPPONENT SYNC) ---
+                    // 1. Identify the opponent
+                    WebSocketSession opponent = (currentMatch.getPlayer1().getId().equals(session.getId())) 
+                                                ? currentMatch.getPlayer2() 
+                                                : currentMatch.getPlayer1();
+                                                
+                    // 2. Fire the warning if they are still connected
+                    if (opponent.isOpen()) {
+                        com.logicgrid.models.User scorer = (com.logicgrid.models.User) session.getAttributes().get("loggedInUser");
+                        Map<String, String> syncMsg = new HashMap<>();
+                        syncMsg.put("type", "OPPONENT_SCORED");
+                        syncMsg.put("message", scorer.getUsername() + " solved the question!");
+                        opponent.sendMessage(new TextMessage(gson.toJson(syncMsg)));
+                    }
+                    // --------------------------------------------
+
                     currentMatch.advanceQuestion();
                     
                     if (currentMatch.isGameOver()) {
@@ -119,7 +136,6 @@ public class GameSocketHandler extends TextWebSocketHandler {
             System.err.println("REFEREE WARNING: Received malformed data from " + session.getId() + ". Ignoring.");
         }
     }
-
     // --- HELPER METHODS ---
     private void broadcastQuestion(Match match) throws Exception {
         Map<String, Object> payload = new HashMap<>();
