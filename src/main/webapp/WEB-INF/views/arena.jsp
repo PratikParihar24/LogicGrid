@@ -30,6 +30,7 @@
         <div id="answerArea" style="display:none; margin-top: 20px;">
             <input type="text" id="playerAnswer" placeholder="Type the exact output here..." style="padding: 10px; font-size: 1.2em; width: 60%; border-radius: 5px; border: 1px solid #ccc; color: #000;">
             <button onclick="submitAnswer()" style="padding: 10px 20px; font-size: 1.2em; background-color: #00ff00; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">SUBMIT</button>
+        	<button id="surrenderBtn" onclick="surrenderMatch()" style="padding: 10px 20px; font-size: 1.2em; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-left: 10px;">SURRENDER</button>
         </div>
         
         <a href="lobby" class="btn-cancel">Cancel Search</a>
@@ -130,6 +131,13 @@
             // Clear the box for the next question
             inputField.value = "";
             console.log("Sent answer to server: " + answerText);
+        }
+     // 7. Function to intentionally forfeit the match
+        function surrenderMatch() {
+            if(confirm("Are you sure you want to surrender? You will lose Elo!")) {
+                const payload = { type: "SURRENDER" };
+                socket.send(JSON.stringify(payload));
+            }
         }
     </script>
     

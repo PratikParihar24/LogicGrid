@@ -85,6 +85,12 @@ public class GameSocketHandler extends TextWebSocketHandler {
             // Attempt to parse the incoming message as JSON
             Map<String, String> payload = gson.fromJson(message.getPayload(), Map.class);
             
+         // NEW: Check if they clicked Surrender
+            if ("SURRENDER".equals(payload.get("type"))) {
+                handleForfeit(session);
+                return; // Stop processing, the game is over
+            }
+            
             if ("SUBMIT_ANSWER".equals(payload.get("type"))) {
                 String userAnswer = payload.get("answer").trim();
                 Question currentQuestion = currentMatch.getCurrentQuestion();
@@ -182,6 +188,11 @@ private void endMatch(Match match) throws Exception {
         // If they disconnect mid-match, we handle the forfeit here later
         activeMatches.remove(session); 
         
+        // NEW: If they close the browser while actively in a match, penalize them!
+        if (activeMatches.containsKey(session)) {
+            handleForfeit(session);
+        }
+        
      // FIX: The "Too Fast" Bug
         // We spin off a tiny background thread so this method can finish and Tomcat can open the pipe.
         new Thread(() -> {
@@ -192,5 +203,45 @@ private void endMatch(Match match) throws Exception {
                 System.err.println("Error in matchmaker thread: " + e.getMessage());
             }
         }).start();
+    }
+ // --- THE FORFEIT ENGINE ---
+    private void handleForfeit(WebSocketSession forfeitingSession) throws Exception {
+        Match currentMatch = activeMatches.get(forfeitingSession);
+        if (currentMatch == null) return; // If they aren't in a match, do nothing
+
+        // 1. Identify the Winner and the Loser
+        WebSocketSession winnerSession = (currentMatch.getPlayer1().equals(forfeitingSession)) 
+                                         ? currentMatch.getPlayer2() 
+                                         : currentMatch.getPlayer1();
+
+        com.logicgrid.models.User loser = (com.logicgrid.models.User) forfeitingSession.getAttributes().get("loggedInUser");
+        com.logicgrid.models.User winner = (com.logicgrid.models.User) winnerSession.getAttributes().get("loggedInUser");
+
+        System.out.println("REFEREE: " + loser.getUsername() + " fled the battle! " + winner.getUsername() + " wins by default.");
+
+        // 2. The Penalty Math (Winner beat Loser)
+        EloCalculator.updateRatings(winner, loser);
+        userDao.updateUser(winner);
+        userDao.updateUser(loser);
+
+        // 3. Rescue the Survivor
+        if (winnerSession.isOpen()) {
+            Map<String, String> winPayload = new HashMap<>();
+            winPayload.put("type", "GAME_OVER");
+            winPayload.put("message", "Opponent Fled! You Win! | Your New Elo: " + winner.getEloRating());
+            winnerSession.sendMessage(new TextMessage(gson.toJson(winPayload)));
+        }
+
+        // 4. Acknowledge the Surrender (Only works if they clicked the button and didn't close the tab)
+        if (forfeitingSession.isOpen()) {
+            Map<String, String> losePayload = new HashMap<>();
+            losePayload.put("type", "GAME_OVER");
+            losePayload.put("message", "You Surrendered. | Your New Elo: " + loser.getEloRating());
+            forfeitingSession.sendMessage(new TextMessage(gson.toJson(losePayload)));
+        }
+
+        // 5. Clear the Arena
+        activeMatches.remove(currentMatch.getPlayer1());
+        activeMatches.remove(currentMatch.getPlayer2());
     }
 }
