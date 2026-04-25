@@ -161,26 +161,49 @@ private void endMatch(Match match) throws Exception {
         com.logicgrid.models.User p2 = (com.logicgrid.models.User) match.getPlayer2().getAttributes().get("loggedInUser");
         
         String resultMessage = "";
+        String p1Result = "";
+        String p2Result = "";
+
+        // 🛡️ CAPTURE OLD ELO FIRST (So we can calculate the exact +/- change)
+        int oldP1Elo = p1.getEloRating();
+        int oldP2Elo = p2.getEloRating();
 
         // 2. Figure out who won and calculate Elo!
         if (match.getPlayer1Score() > match.getPlayer2Score()) {
             resultMessage = p1.getUsername() + " Wins! (" + match.getPlayer1Score() + "-" + match.getPlayer2Score() + ")";
             EloCalculator.updateRatings(p1, p2); // p1 is winner
+            p1Result = "Win";
+            p2Result = "Loss";
             
         } else if (match.getPlayer2Score() > match.getPlayer1Score()) {
             resultMessage = p2.getUsername() + " Wins! (" + match.getPlayer2Score() + "-" + match.getPlayer1Score() + ")";
             EloCalculator.updateRatings(p2, p1); // p2 is winner
+            p1Result = "Loss";
+            p2Result = "Win";
             
         } else {
             resultMessage = "It's a Tie! (" + match.getPlayer1Score() + "-" + match.getPlayer2Score() + ")";
             // We do nothing to Elo on a tie to keep it simple for now
+            p1Result = "Tie";
+            p2Result = "Tie";
         }
+
+        // Calculate the exact Elo change (e.g., +16 or -14)
+        int p1EloChange = p1.getEloRating() - oldP1Elo;
+        int p2EloChange = p2.getEloRating() - oldP2Elo;
 
         // 3. Save the new ratings directly to the MySQL Database
         userDao.updateUser(p1);
         userDao.updateUser(p2);
 
-        // 4. Create custom Game Over envelopes to show their exact new Elo
+        // 🚀 4. GENERATE AND SAVE MATCH HISTORY TICKETS
+        com.logicgrid.models.MatchRecord record1 = new com.logicgrid.models.MatchRecord(p1, p2.getUsername(), p1Result, p1EloChange);
+        com.logicgrid.models.MatchRecord record2 = new com.logicgrid.models.MatchRecord(p2, p1.getUsername(), p2Result, p2EloChange);
+        
+        userDao.saveMatchRecord(record1);
+        userDao.saveMatchRecord(record2);
+
+        // 5. Create custom Game Over envelopes to show their exact new Elo
         Map<String, String> p1Payload = new HashMap<>();
         p1Payload.put("type", "GAME_OVER");
         p1Payload.put("message", resultMessage + " | Your New Elo: " + p1.getEloRating());
@@ -189,11 +212,11 @@ private void endMatch(Match match) throws Exception {
         p2Payload.put("type", "GAME_OVER");
         p2Payload.put("message", resultMessage + " | Your New Elo: " + p2.getEloRating());
 
-        // 5. Fire the final messages
+        // 6. Fire the final messages
         if (match.getPlayer1().isOpen()) match.getPlayer1().sendMessage(new TextMessage(gson.toJson(p1Payload)));
         if (match.getPlayer2().isOpen()) match.getPlayer2().sendMessage(new TextMessage(gson.toJson(p2Payload)));
         
-        // 6. Clear the arena
+        // 7. Clear the arena
         activeMatches.remove(match.getPlayer1());
         activeMatches.remove(match.getPlayer2());
     }

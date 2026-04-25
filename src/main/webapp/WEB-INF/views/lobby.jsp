@@ -37,17 +37,42 @@
 
     <h2>Recent Battles</h2>
     <table>
-        <tr>
-            <th>Opponent</th>
-            <th>Result</th>
-            <th>Elo Change</th>
-            <th>Date</th>
-        </tr>
-        <tr>
-            <td colspan="4" style="text-align: center; color: #888; font-style: italic;">
-                No matches played yet. Step into the arena to begin your legacy.
-            </td>
-        </tr>
+        <thead>
+            <tr>
+                <th>Opponent</th>
+                <th>Result</th>
+                <th>Elo Change</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            <c:if test="${empty matchHistory}">
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #888; font-style: italic;">
+                        No matches played yet. Step into the arena to begin your legacy.
+                    </td>
+                </tr>
+            </c:if>
+
+            <c:forEach var="match" items="${matchHistory}">
+                <tr>
+                    <td>${match.opponentName}</td>
+                    <td>
+                        <span style="color: ${match.result == 'Win' ? '#2ecc71' : (match.result == 'Loss' ? '#e74c3c' : '#f1c40f')}; font-weight: bold;">
+                            ${match.result}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="color: ${match.eloChange >= 0 ? '#2ecc71' : '#e74c3c'}">
+                            ${match.eloChange >= 0 ? '+' : ''}${match.eloChange}
+                        </span>
+                    </td>
+                    <td style="font-size: 0.9em; color: #888;">
+                        ${match.matchDate}
+                    </td>
+                </tr>
+            </c:forEach>
+        </tbody>
     </table>
 
     <a href="logout" class="btn-home" style="background-color: #e74c3c;">Logout</a>

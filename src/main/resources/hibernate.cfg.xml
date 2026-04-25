@@ -17,6 +17,6 @@
         <property name="hibernate.hbm2ddl.auto">update</property>
 
         <mapping class="com.logicgrid.models.User"/>
-        <mapping class="com.logicgrid.models.MatchHistory"/>
+        <mapping class="com.logicgrid.models.MatchRecord"/>
     </session-factory>
 </hibernate-configuration>
