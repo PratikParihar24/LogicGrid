@@ -246,7 +246,7 @@ private void endMatch(Match match) throws Exception {
  // --- THE FORFEIT ENGINE ---
     private void handleForfeit(WebSocketSession forfeitingSession) throws Exception {
         Match currentMatch = activeMatches.get(forfeitingSession);
-        if (currentMatch == null) return; // If they aren't in a match, do nothing
+        if (currentMatch == null) return; 
 
         // 1. Identify the Winner and the Loser
         WebSocketSession winnerSession = (currentMatch.getPlayer1().equals(forfeitingSession)) 
@@ -256,6 +256,10 @@ private void endMatch(Match match) throws Exception {
         com.logicgrid.models.User loser = (com.logicgrid.models.User) forfeitingSession.getAttributes().get("loggedInUser");
         com.logicgrid.models.User winner = (com.logicgrid.models.User) winnerSession.getAttributes().get("loggedInUser");
 
+        // 🛡️ CAPTURE OLD ELO BEFORE CALCULATION
+        int oldWinnerElo = winner.getEloRating();
+        int oldLoserElo = loser.getEloRating();
+
         System.out.println("REFEREE: " + loser.getUsername() + " fled the battle! " + winner.getUsername() + " wins by default.");
 
         // 2. The Penalty Math (Winner beat Loser)
@@ -263,7 +267,17 @@ private void endMatch(Match match) throws Exception {
         userDao.updateUser(winner);
         userDao.updateUser(loser);
 
-        // 3. Rescue the Survivor
+        // 🚀 3. SAVE THE PAPER TRAIL (Match History)
+        int winnerChange = winner.getEloRating() - oldWinnerElo;
+        int loserChange = loser.getEloRating() - oldLoserElo;
+
+        com.logicgrid.models.MatchRecord winRec = new com.logicgrid.models.MatchRecord(winner, loser.getUsername(), "Win (Forfeit)", winnerChange);
+        com.logicgrid.models.MatchRecord loseRec = new com.logicgrid.models.MatchRecord(loser, winner.getUsername(), "Loss (Forfeit)", loserChange);
+
+        userDao.saveMatchRecord(winRec);
+        userDao.saveMatchRecord(loseRec);
+
+        // 4. Rescue the Survivor
         if (winnerSession.isOpen()) {
             Map<String, String> winPayload = new HashMap<>();
             winPayload.put("type", "GAME_OVER");
@@ -271,7 +285,7 @@ private void endMatch(Match match) throws Exception {
             winnerSession.sendMessage(new TextMessage(gson.toJson(winPayload)));
         }
 
-        // 4. Acknowledge the Surrender (Only works if they clicked the button and didn't close the tab)
+        // 5. Acknowledge the Surrender
         if (forfeitingSession.isOpen()) {
             Map<String, String> losePayload = new HashMap<>();
             losePayload.put("type", "GAME_OVER");
@@ -279,7 +293,7 @@ private void endMatch(Match match) throws Exception {
             forfeitingSession.sendMessage(new TextMessage(gson.toJson(losePayload)));
         }
 
-        // 5. Clear the Arena
+        // 6. Clear the Arena
         activeMatches.remove(currentMatch.getPlayer1());
         activeMatches.remove(currentMatch.getPlayer2());
     }
