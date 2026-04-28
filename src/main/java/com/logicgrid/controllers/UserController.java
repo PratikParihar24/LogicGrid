@@ -16,7 +16,7 @@ public class UserController {
 
     // --- REGISTRATION ROUTES ---
 
-    @RequestMapping(value = "/register", method = RequestMethod.GET)
+	@RequestMapping(value = "/register", method = RequestMethod.GET)
     public String showRegistrationForm() {
         return "register"; 
     }
@@ -25,24 +25,32 @@ public class UserController {
     public String processRegistration(
             @RequestParam("username") String username,
             @RequestParam("password") String password,
-            HttpSession session, // Added Session for Auto-Login
+            HttpSession session, 
             Model model) {
         
         User newUser = new User();
         newUser.setUsername(username);
         newUser.setPassword(password);
-        newUser.setEloRating(1000); // CRITICAL FIX: Give them a starting rating so DB saves them!
+        newUser.setEloRating(1000); 
         
         UserDao dao = new UserDao();
-        dao.saveUser(newUser);
         
-        // Auto-Login and send directly to Lobby
-        session.setAttribute("loggedInUser", newUser);
-        System.out.println("LOG: Auto-login session created for new user " + username);
+        // 1. Capture the boolean response from our upgraded DAO
+        boolean isSuccess = dao.saveUser(newUser);
         
-        return "redirect:/lobby"; 
+        if (isSuccess) {
+            // 🟢 SUCCESS: The database confirmed the save. Grant the VIP pass.
+            session.setAttribute("loggedInUser", newUser);
+            System.out.println("LOG: Auto-login session created for REAL user " + username);
+            return "redirect:/lobby"; 
+            
+        } else {
+            // 🔴 FAILURE: Name is taken, too long, or DB crashed. Deny entry!
+            System.out.println("LOG: Registration blocked for " + username + ". Returning to form.");
+            model.addAttribute("errorMessage", "Registration failed. Username may already be taken.");
+            return "register"; // Send them back to the UI to try again
+        }
     }
-
     // --- LOGIN ROUTES ---
 
     @RequestMapping(value = "/login", method = RequestMethod.GET)
